@@ -1,14 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 /* =========================
-   CARGA INICIAL
+   CONFIG
 ========================= */
-let dados = JSON.parse(localStorage.getItem("dados")) || {};
-let contadores = JSON.parse(localStorage.getItem("contadores")) || {
-  cimed: 0,
-  entrada: 0,
-  saida: 0
-};
+const API_URL = "https://script.google.com/macros/s/AKfycbwMoWdI_lPVXLcWStSmZW583GuZxr5KbV3DjGay9bT0Ikqty3K1RC_cRoybRQ6-2_mjpA/exec";
+
+let dados = {};
+let contadores = { cimed: 0, entrada: 0, saida: 0 };
 
 const input = document.getElementById("input");
 const contador = document.getElementById("contador");
@@ -16,24 +14,37 @@ const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
 const btnDownload = document.getElementById("btnDownload");
 
-if (!input || !contador || !acompanhamento) {
-  console.error("Elementos do HTML não encontrados");
-  return;
-}
-
 if (typeof ETAPA === "undefined") {
   alert("Etapa não definida");
   return;
 }
 
-contador.innerText = contadores[ETAPA] || 0;
-
 /* =========================
-   SALVAR
+   API
 ========================= */
-function salvar() {
-  localStorage.setItem("dados", JSON.stringify(dados));
-  localStorage.setItem("contadores", JSON.stringify(contadores));
+async function carregarDados() {
+  const res = await fetch(API_URL);
+  const json = await res.json();
+
+  dados = json.dados || {};
+  contadores = json.contadores || { cimed: 0, entrada: 0, saida: 0 };
+
+  contador.innerText = contadores[ETAPA] || 0;
+  renderAcompanhamento();
+}
+
+async function salvarCodigo(codigo) {
+  await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      acao: "bipar",
+      codigo,
+      etapa: ETAPA
+    })
+  });
+
+  await carregarDados();
 }
 
 /* =========================
@@ -62,13 +73,13 @@ function renderAcompanhamento() {
       </tr>
   `;
 
-  const codigos = Object.keys(dados);
+  const codigos = Object.keys(dados).sort();
 
   if (codigos.length === 0) {
     html += `<tr><td colspan="4">Nenhum registro</td></tr>`;
   }
 
-  codigos.sort().forEach(codigo => {
+  codigos.forEach(codigo => {
     const d = dados[codigo];
     const status = calcularStatus(d);
     const cls = status === "OK" ? "ok" : "erro";
@@ -92,41 +103,31 @@ function renderAcompanhamento() {
 /* =========================
    BIPAGEM
 ========================= */
-input.addEventListener("keypress", e => {
+input.addEventListener("keypress", async e => {
   if (e.key !== "Enter") return;
 
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  if (!dados[codigo]) {
-    dados[codigo] = { cimed: false, entrada: false, saida: false };
-  }
-
-  if (dados[codigo][ETAPA]) {
+  if (dados[codigo]?.[ETAPA]) {
     alert(`Código ${codigo} já bipado nesta etapa`);
     input.value = "";
     return;
   }
 
-  if (ETAPA === "entrada" && !dados[codigo].cimed) {
+  if (ETAPA === "entrada" && !dados[codigo]?.cimed) {
     alert("Código não passou pelo Cimed");
     input.value = "";
     return;
   }
 
-  if (ETAPA === "saida" && !dados[codigo].entrada) {
+  if (ETAPA === "saida" && !dados[codigo]?.entrada) {
     alert("Código não passou pela Entrada");
     input.value = "";
     return;
   }
 
-  dados[codigo][ETAPA] = true;
-  contadores[ETAPA]++;
-
-  salvar();
-  contador.innerText = contadores[ETAPA];
-  renderAcompanhamento();
-
+  await salvarCodigo(codigo);
   input.value = "";
 });
 
@@ -164,6 +165,6 @@ if (btnDownload) {
 /* =========================
    INIT
 ========================= */
-renderAcompanhamento();
+carregarDados();
 
 });
