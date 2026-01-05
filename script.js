@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
    CONFIG
 ========================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbyxfjB7AMLtyYeCtqyXRt-DbBYd4VS2-Vg0qDmIndsb4Xs_U-RJDTZldjwgi71-fPQuYQ/exec";
+const INTERVALO_ENVIO = 5000; // 5s envio em lote
 
 /* =========================
    ELEMENTOS
@@ -12,23 +13,29 @@ const input = document.getElementById("input");
 const contador = document.getElementById("contador");
 const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
-const btnDownload = document.getElementById("btnDownload");
 
-if (!input || !contador || !acompanhamento) {
-  alert("Erro: elementos não encontrados");
-  return;
-}
-
-if (typeof ETAPA === "undefined") {
-  alert("Erro: ETAPA não definida");
+if (!input || !contador || !acompanhamento || typeof ETAPA === "undefined") {
+  alert("Erro de inicialização");
   return;
 }
 
 /* =========================
-   ESTADO
+   ESTADO LOCAL
 ========================= */
-let dados = {};
-let contadores = { cimed: 0, entrada: 0, saida: 0 };
+let dados = JSON.parse(localStorage.getItem("dados")) || {};
+let contadores = JSON.parse(localStorage.getItem("contadores")) || {
+  cimed: 0, entrada: 0, saida: 0
+};
+let fila = JSON.parse(localStorage.getItem("fila")) || [];
+
+/* =========================
+   PERSISTÊNCIA LOCAL
+========================= */
+function salvarLocal() {
+  localStorage.setItem("dados", JSON.stringify(dados));
+  localStorage.setItem("contadores", JSON.stringify(contadores));
+  localStorage.setItem("fila", JSON.stringify(fila));
+}
 
 /* =========================
    STATUS
@@ -44,8 +51,7 @@ function calcularStatus(d) {
    RENDER
 ========================= */
 function renderAcompanhamento() {
-  const filtro = filtroStatus ? filtroStatus.value : "todos";
-
+  const filtro = filtroStatus.value || "todos";
   let html = `
     <table>
       <tr>
@@ -53,12 +59,10 @@ function renderAcompanhamento() {
         <th>Entrada</th>
         <th>Saída</th>
         <th>Status</th>
-      </tr>
-  `;
+      </tr>`;
 
   const codigos = Object.keys(dados);
-
-  if (codigos.length === 0) {
+  if (!codigos.length) {
     html += `<tr><td colspan="4">Nenhum registro</td></tr>`;
   }
 
@@ -73,8 +77,7 @@ function renderAcompanhamento() {
         <td>${d.entrada ? codigo : ""}</td>
         <td>${d.saida ? codigo : ""}</td>
         <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 
   html += "</table>";
@@ -82,25 +85,7 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   CARREGAR DADOS DO BACKEND
-========================= */
-async function carregarDados() {
-  try {
-    const res = await fetch(`${API_URL}?acao=listar`);
-    const json = await res.json();
-
-    dados = json.dados || {};
-    contadores = json.contadores || contadores;
-
-    contador.innerText = contadores[ETAPA] || 0;
-    renderAcompanhamento();
-  } catch (e) {
-    console.error("Erro ao carregar dados", e);
-  }
-}
-
-/* =========================
-   BIPAGEM (RÁPIDA)
+   BIPAGEM (INSTANTÂNEA)
 ========================= */
 input.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
@@ -108,7 +93,6 @@ input.addEventListener("keydown", e => {
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  // ===== ATUALIZA LOCAL IMEDIATA =====
   if (!dados[codigo]) {
     dados[codigo] = { cimed: false, entrada: false, saida: false };
   }
@@ -121,27 +105,40 @@ input.addEventListener("keydown", e => {
 
   dados[codigo][ETAPA] = true;
   contadores[ETAPA]++;
+  fila.push({ codigo, etapa: ETAPA, ts: Date.now() });
+
+  salvarLocal();
   contador.innerText = contadores[ETAPA];
   renderAcompanhamento();
   input.value = "";
-
-  // ===== ENVIO BACKEND (SEM BLOQUEAR UI) =====
-  const url = `${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`;
-  fetch(url).catch(() => {
-    console.warn("Falha ao registrar no backend");
-  });
 });
 
 /* =========================
-   FILTRO
+   ENVIO EM LOTE
 ========================= */
-if (filtroStatus) {
-  filtroStatus.addEventListener("change", renderAcompanhamento);
+async function enviarFila() {
+  if (!fila.length) return;
+
+  const lote = [...fila];
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao: "lote", dados: lote })
+    });
+    fila = [];
+    salvarLocal();
+  } catch (e) {
+    console.warn("Fila pendente, tentando novamente...");
+  }
 }
+
+setInterval(enviarFila, INTERVALO_ENVIO);
 
 /* =========================
    INIT
 ========================= */
-carregarDados();
+contador.innerText = contadores[ETAPA];
+renderAcompanhamento();
 
 });
