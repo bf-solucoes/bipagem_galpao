@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /* =========================
    CONFIG
 ========================= */
-const API_URL = "https://script.google.com/macros/s/AKfycbwMoWdI_lPVXLcWStSmZW583GuZxr5KbV3DjGay9bT0Ikqty3K1RC_cRoybRQ6-2_mjpA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyxfjB7AMLtyYeCtqyXRt-DbBYd4VS2-Vg0qDmIndsb4Xs_U-RJDTZldjwgi71-fPQuYQ/exec";
 
 /* =========================
    ELEMENTOS
@@ -131,3 +131,4 @@ if (filtroStatus) {
 carregarDados();
 
 });
+
