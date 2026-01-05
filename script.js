@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
    CONFIG
 ========================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbyxfjB7AMLtyYeCtqyXRt-DbBYd4VS2-Vg0qDmIndsb4Xs_U-RJDTZldjwgi71-fPQuYQ/exec";
-const INTERVALO_ENVIO = 5000; // 5s envio em lote
+const ENVIO_MS = 8000; // backend em background
 
 /* =========================
    ELEMENTOS
@@ -20,7 +20,7 @@ if (!input || !contador || !acompanhamento || typeof ETAPA === "undefined") {
 }
 
 /* =========================
-   ESTADO LOCAL
+   ESTADO LOCAL (RÁPIDO)
 ========================= */
 let dados = JSON.parse(localStorage.getItem("dados")) || {};
 let contadores = JSON.parse(localStorage.getItem("contadores")) || {
@@ -29,7 +29,7 @@ let contadores = JSON.parse(localStorage.getItem("contadores")) || {
 let fila = JSON.parse(localStorage.getItem("fila")) || [];
 
 /* =========================
-   PERSISTÊNCIA LOCAL
+   LOCAL STORAGE
 ========================= */
 function salvarLocal() {
   localStorage.setItem("dados", JSON.stringify(dados));
@@ -48,10 +48,10 @@ function calcularStatus(d) {
 }
 
 /* =========================
-   RENDER
+   RENDER IMEDIATO
 ========================= */
 function renderAcompanhamento() {
-  const filtro = filtroStatus.value || "todos";
+  const filtro = filtroStatus?.value || "todos";
   let html = `
     <table>
       <tr>
@@ -85,7 +85,7 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   BIPAGEM (INSTANTÂNEA)
+   BIPAGEM (ZERO LATÊNCIA)
 ========================= */
 input.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
@@ -114,26 +114,28 @@ input.addEventListener("keydown", e => {
 });
 
 /* =========================
-   ENVIO EM LOTE
+   ENVIO EM BACKGROUND
 ========================= */
 async function enviarFila() {
   if (!fila.length) return;
 
-  const lote = [...fila];
+  const payload = { acao: "lote", dados: [...fila] };
+
   try {
     await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acao: "lote", dados: lote })
+      body: JSON.stringify(payload)
     });
+
     fila = [];
     salvarLocal();
-  } catch (e) {
-    console.warn("Fila pendente, tentando novamente...");
+  } catch {
+    // silencioso: tenta novamente depois
   }
 }
 
-setInterval(enviarFila, INTERVALO_ENVIO);
+setInterval(enviarFila, ENVIO_MS);
 
 /* =========================
    INIT
