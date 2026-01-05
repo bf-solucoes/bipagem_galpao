@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 /* =========================
-   CONFIGURAÇÃO
+   CONFIG
 ========================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbwMoWdI_lPVXLcWStSmZW583GuZxr5KbV3DjGay9bT0Ikqty3K1RC_cRoybRQ6-2_mjpA/exec";
 
@@ -15,7 +15,7 @@ const filtroStatus = document.getElementById("filtroStatus");
 const btnDownload = document.getElementById("btnDownload");
 
 if (!input || !contador || !acompanhamento) {
-  alert("Erro: elementos do HTML não encontrados");
+  alert("Erro: elementos não encontrados");
   return;
 }
 
@@ -25,14 +25,10 @@ if (typeof ETAPA === "undefined") {
 }
 
 /* =========================
-   ESTADO EM MEMÓRIA
+   ESTADO
 ========================= */
 let dados = {};
-let contadores = {
-  cimed: 0,
-  entrada: 0,
-  saida: 0
-};
+let contadores = { cimed: 0, entrada: 0, saida: 0 };
 
 /* =========================
    STATUS
@@ -69,8 +65,6 @@ function renderAcompanhamento() {
   codigos.sort().forEach(codigo => {
     const d = dados[codigo];
     const status = calcularStatus(d);
-    const cls = status === "OK" ? "ok" : "erro";
-
     if (filtro !== "todos" && status !== filtro) return;
 
     html += `
@@ -78,7 +72,7 @@ function renderAcompanhamento() {
         <td>${d.cimed ? codigo : ""}</td>
         <td>${d.entrada ? codigo : ""}</td>
         <td>${d.saida ? codigo : ""}</td>
-        <td class="${cls}">${status}</td>
+        <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
       </tr>
     `;
   });
@@ -88,7 +82,21 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   BIPAGEM (ENVIO AO BACKEND)
+   CARREGAR DADOS DO BACKEND
+========================= */
+async function carregarDados() {
+  const res = await fetch(`${API_URL}?acao=listar`);
+  const json = await res.json();
+
+  dados = json.dados || {};
+  contadores = json.contadores || contadores;
+
+  contador.innerText = contadores[ETAPA] || 0;
+  renderAcompanhamento();
+}
+
+/* =========================
+   BIPAGEM (GET)
 ========================= */
 input.addEventListener("keypress", async e => {
   if (e.key !== "Enter") return;
@@ -96,41 +104,18 @@ input.addEventListener("keypress", async e => {
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        codigo: codigo,
-        etapa: ETAPA
-      })
-    });
+  const url = `${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`;
 
-    const result = await response.json();
+  const res = await fetch(url);
+  const json = await res.json();
 
-    if (result.status !== "ok") {
-      alert(result.mensagem || "Erro ao registrar");
-      return;
-    }
-
-    // Atualiza memória local (visual)
-    if (!dados[codigo]) {
-      dados[codigo] = { cimed: false, entrada: false, saida: false };
-    }
-
-    dados[codigo][ETAPA] = true;
-    contadores[ETAPA]++;
-    contador.innerText = contadores[ETAPA];
-
-    renderAcompanhamento();
-    input.value = "";
-
-  } catch (err) {
-    console.error(err);
-    alert("Erro de comunicação com o servidor");
+  if (json.status !== "ok") {
+    alert(json.mensagem);
+    return;
   }
+
+  await carregarDados();
+  input.value = "";
 });
 
 /* =========================
@@ -141,33 +126,8 @@ if (filtroStatus) {
 }
 
 /* =========================
-   DOWNLOAD CSV (VISUAL)
-========================= */
-if (btnDownload) {
-  btnDownload.addEventListener("click", () => {
-    let csv = "Codigo,Cimed,Entrada,Saida,Status\n";
-
-    Object.keys(dados).sort().forEach(codigo => {
-      const d = dados[codigo];
-      csv += `${codigo},${d.cimed?"Sim":"Não"},${d.entrada?"Sim":"Não"},${d.saida?"Sim":"Não"},${calcularStatus(d)}\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bipagem_galpao.csv";
-    a.click();
-
-    URL.revokeObjectURL(url);
-  });
-}
-
-/* =========================
    INIT
 ========================= */
-contador.innerText = 0;
-renderAcompanhamento();
+carregarDados();
 
 });
