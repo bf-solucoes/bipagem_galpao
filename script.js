@@ -1,51 +1,38 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 /* =========================
-   CONFIG
+   CONFIGURAÇÃO
 ========================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbwMoWdI_lPVXLcWStSmZW583GuZxr5KbV3DjGay9bT0Ikqty3K1RC_cRoybRQ6-2_mjpA/exec";
 
-let dados = {};
-let contadores = { cimed: 0, entrada: 0, saida: 0 };
-
+/* =========================
+   ELEMENTOS
+========================= */
 const input = document.getElementById("input");
 const contador = document.getElementById("contador");
 const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
 const btnDownload = document.getElementById("btnDownload");
 
+if (!input || !contador || !acompanhamento) {
+  alert("Erro: elementos do HTML não encontrados");
+  return;
+}
+
 if (typeof ETAPA === "undefined") {
-  alert("Etapa não definida");
+  alert("Erro: ETAPA não definida");
   return;
 }
 
 /* =========================
-   API
+   ESTADO EM MEMÓRIA
 ========================= */
-async function carregarDados() {
-  const res = await fetch(API_URL);
-  const json = await res.json();
-
-  dados = json.dados || {};
-  contadores = json.contadores || { cimed: 0, entrada: 0, saida: 0 };
-
-  contador.innerText = contadores[ETAPA] || 0;
-  renderAcompanhamento();
-}
-
-async function salvarCodigo(codigo) {
-  await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      acao: "bipar",
-      codigo,
-      etapa: ETAPA
-    })
-  });
-
-  await carregarDados();
-}
+let dados = {};
+let contadores = {
+  cimed: 0,
+  entrada: 0,
+  saida: 0
+};
 
 /* =========================
    STATUS
@@ -58,7 +45,7 @@ function calcularStatus(d) {
 }
 
 /* =========================
-   ACOMPANHAMENTO
+   RENDER
 ========================= */
 function renderAcompanhamento() {
   const filtro = filtroStatus ? filtroStatus.value : "todos";
@@ -73,13 +60,13 @@ function renderAcompanhamento() {
       </tr>
   `;
 
-  const codigos = Object.keys(dados).sort();
+  const codigos = Object.keys(dados);
 
   if (codigos.length === 0) {
     html += `<tr><td colspan="4">Nenhum registro</td></tr>`;
   }
 
-  codigos.forEach(codigo => {
+  codigos.sort().forEach(codigo => {
     const d = dados[codigo];
     const status = calcularStatus(d);
     const cls = status === "OK" ? "ok" : "erro";
@@ -101,7 +88,7 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   BIPAGEM
+   BIPAGEM (ENVIO AO BACKEND)
 ========================= */
 input.addEventListener("keypress", async e => {
   if (e.key !== "Enter") return;
@@ -109,26 +96,41 @@ input.addEventListener("keypress", async e => {
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  if (dados[codigo]?.[ETAPA]) {
-    alert(`Código ${codigo} já bipado nesta etapa`);
-    input.value = "";
-    return;
-  }
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        codigo: codigo,
+        etapa: ETAPA
+      })
+    });
 
-  if (ETAPA === "entrada" && !dados[codigo]?.cimed) {
-    alert("Código não passou pelo Cimed");
-    input.value = "";
-    return;
-  }
+    const result = await response.json();
 
-  if (ETAPA === "saida" && !dados[codigo]?.entrada) {
-    alert("Código não passou pela Entrada");
-    input.value = "";
-    return;
-  }
+    if (result.status !== "ok") {
+      alert(result.mensagem || "Erro ao registrar");
+      return;
+    }
 
-  await salvarCodigo(codigo);
-  input.value = "";
+    // Atualiza memória local (visual)
+    if (!dados[codigo]) {
+      dados[codigo] = { cimed: false, entrada: false, saida: false };
+    }
+
+    dados[codigo][ETAPA] = true;
+    contadores[ETAPA]++;
+    contador.innerText = contadores[ETAPA];
+
+    renderAcompanhamento();
+    input.value = "";
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro de comunicação com o servidor");
+  }
 });
 
 /* =========================
@@ -139,7 +141,7 @@ if (filtroStatus) {
 }
 
 /* =========================
-   DOWNLOAD CSV
+   DOWNLOAD CSV (VISUAL)
 ========================= */
 if (btnDownload) {
   btnDownload.addEventListener("click", () => {
@@ -165,6 +167,7 @@ if (btnDownload) {
 /* =========================
    INIT
 ========================= */
-carregarDados();
+contador.innerText = 0;
+renderAcompanhamento();
 
 });
