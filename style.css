@@ -1,0 +1,100 @@
+/* ===== CONFIGURAÇÃO GERAL ===== */
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #07163f; /* fundo azul escuro */
+  color: #ffffff;
+}
+
+/* ===== CABEÇALHO / LOGO ===== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* título à esquerda / logo à direita */
+  margin-bottom: 20px;
+}
+
+.header h2 {
+  margin: 0;
+}
+
+.logo {
+  height: 80px;
+}
+
+/* ===== INPUT DE BIPAGEM ===== */
+input {
+  width: 300px;
+  height: 40px;
+  font-size: 18px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+/* ===== SELECT (FILTRO STATUS) ===== */
+select {
+  height: 35px;
+  font-size: 16px;
+  padding: 5px;
+  border-radius: 5px;
+  border: none;
+}
+
+/* ===== CABEÇALHO ACOMPANHAMENTO ===== */
+.acomp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 25px;
+  margin-bottom: 10px;
+}
+
+.acomp-header h3 {
+  margin: 0;
+}
+
+/* ===== BOTÃO DOWNLOAD ===== */
+#btnDownload {
+  background-color: #1e90ff;
+  color: #ffffff;
+  border: none;
+  padding: 8px 15px;
+  font-size: 14px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#btnDownload:hover {
+  background-color: #1565c0;
+}
+
+/* ===== TABELA ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+th, td {
+  border: 1px solid #000;
+  padding: 6px;
+  text-align: center;
+}
+
+/* ===== STATUS ===== */
+.ok {
+  color: green;
+  font-weight: bold;
+}
+
+.erro {
+  color: red;
+  font-weight: bold;
+}
