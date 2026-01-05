@@ -85,37 +85,51 @@ function renderAcompanhamento() {
    CARREGAR DADOS DO BACKEND
 ========================= */
 async function carregarDados() {
-  const res = await fetch(`${API_URL}?acao=listar`);
-  const json = await res.json();
+  try {
+    const res = await fetch(`${API_URL}?acao=listar`);
+    const json = await res.json();
 
-  dados = json.dados || {};
-  contadores = json.contadores || contadores;
+    dados = json.dados || {};
+    contadores = json.contadores || contadores;
 
-  contador.innerText = contadores[ETAPA] || 0;
-  renderAcompanhamento();
+    contador.innerText = contadores[ETAPA] || 0;
+    renderAcompanhamento();
+  } catch (e) {
+    console.error("Erro ao carregar dados", e);
+  }
 }
 
 /* =========================
-   BIPAGEM (GET)
+   BIPAGEM (RÁPIDA)
 ========================= */
-input.addEventListener("keypress", async e => {
+input.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
 
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  const url = `${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`;
+  // ===== ATUALIZA LOCAL IMEDIATA =====
+  if (!dados[codigo]) {
+    dados[codigo] = { cimed: false, entrada: false, saida: false };
+  }
 
-  const res = await fetch(url);
-  const json = await res.json();
-
-  if (json.status !== "ok") {
-    alert(json.mensagem);
+  if (dados[codigo][ETAPA]) {
+    alert("Código já bipado nesta etapa");
+    input.value = "";
     return;
   }
 
-  await carregarDados();
+  dados[codigo][ETAPA] = true;
+  contadores[ETAPA]++;
+  contador.innerText = contadores[ETAPA];
+  renderAcompanhamento();
   input.value = "";
+
+  // ===== ENVIO BACKEND (SEM BLOQUEAR UI) =====
+  const url = `${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`;
+  fetch(url).catch(() => {
+    console.warn("Falha ao registrar no backend");
+  });
 });
 
 /* =========================
@@ -131,5 +145,3 @@ if (filtroStatus) {
 carregarDados();
 
 });
-
-
