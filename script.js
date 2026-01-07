@@ -33,6 +33,7 @@ if (typeof ETAPA === "undefined") {
 ========================= */
 let dados = {};
 let contadores = { cimed: 0, entrada: 0, saida: 0 };
+let carregado = false;
 
 /* =========================
    UTILS
@@ -42,9 +43,9 @@ function agora() {
 }
 
 function atualizarContadores() {
-  cntCimed.innerText = contadores.cimed;
-  cntEntrada.innerText = contadores.entrada;
-  cntSaida.innerText = contadores.saida;
+  cntCimed.innerText = contadores.cimed || 0;
+  cntEntrada.innerText = contadores.entrada || 0;
+  cntSaida.innerText = contadores.saida || 0;
 }
 
 /* =========================
@@ -109,7 +110,7 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   CARREGAR BACKEND
+   BACKEND
 ========================= */
 async function carregarDados() {
   try {
@@ -122,47 +123,55 @@ async function carregarDados() {
     contador.innerText = contadores[ETAPA] || 0;
     atualizarContadores();
     renderAcompanhamento();
+    carregado = true;
   } catch (e) {
     console.error("Erro ao carregar dados", e);
   }
 }
 
 /* =========================
-   BIPAGEM (INSTANTÂNEA)
+   BIPAGEM INSTANTÂNEA (SEM ENTER)
 ========================= */
-input.addEventListener("keydown", e => {
-  if (e.key !== "Enter") return;
+let timer;
 
-  const codigo = input.value.trim();
-  if (!codigo) return;
+input.addEventListener("input", () => {
+  clearTimeout(timer);
 
-  if (!dados[codigo]) {
-    dados[codigo] = {
-      cimed: { ok: false, data: null },
-      entrada: { ok: false, data: null },
-      saida: { ok: false, data: null }
+  timer = setTimeout(() => {
+    const codigo = input.value.trim();
+    if (!codigo || !carregado) return;
+
+    if (!dados[codigo]) {
+      dados[codigo] = {
+        cimed: { ok: false, data: null },
+        entrada: { ok: false, data: null },
+        saida: { ok: false, data: null }
+      };
+    }
+
+    if (dados[codigo][ETAPA].ok) {
+      input.value = "";
+      return;
+    }
+
+    dados[codigo][ETAPA] = {
+      ok: true,
+      data: agora()
     };
-  }
 
-  if (dados[codigo][ETAPA].ok) {
-    alert("Código já bipado nesta etapa");
+    contadores[ETAPA] = (contadores[ETAPA] || 0) + 1;
+
+    contador.innerText = contadores[ETAPA];
+    atualizarContadores();
+    renderAcompanhamento();
+
     input.value = "";
-    return;
-  }
+    input.focus();
 
-  dados[codigo][ETAPA] = {
-    ok: true,
-    data: agora()
-  };
-
-  contadores[ETAPA]++;
-  contador.innerText = contadores[ETAPA];
-  atualizarContadores();
-  renderAcompanhamento();
-  input.value = "";
-
-  // backend assíncrono
-  fetch(`${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`).catch(() => {});
+    // backend assíncrono (não trava)
+    fetch(`${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`)
+      .catch(() => {});
+  }, 120); // tempo ideal p/ leitor
 });
 
 /* =========================
