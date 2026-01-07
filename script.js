@@ -12,7 +12,11 @@ const input = document.getElementById("input");
 const contador = document.getElementById("contador");
 const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
-const btnDownload = document.getElementById("btnDownload");
+const filtroData = document.getElementById("filtroData");
+
+const cntCimed = document.getElementById("cntCimed");
+const cntEntrada = document.getElementById("cntEntrada");
+const cntSaida = document.getElementById("cntSaida");
 
 if (!input || !contador || !acompanhamento) {
   alert("Erro: elementos não encontrados");
@@ -31,12 +35,25 @@ let dados = {};
 let contadores = { cimed: 0, entrada: 0, saida: 0 };
 
 /* =========================
+   UTILS
+========================= */
+function agora() {
+  return new Date().toLocaleString("pt-BR");
+}
+
+function atualizarContadores() {
+  cntCimed.innerText = contadores.cimed;
+  cntEntrada.innerText = contadores.entrada;
+  cntSaida.innerText = contadores.saida;
+}
+
+/* =========================
    STATUS
 ========================= */
 function calcularStatus(d) {
-  if (!d.cimed) return "Pendente Cimed";
-  if (d.cimed && !d.entrada) return "Falta Entrada";
-  if (d.cimed && d.entrada && !d.saida) return "Falta Saída";
+  if (!d.cimed.ok) return "Pendente Cimed";
+  if (d.cimed.ok && !d.entrada.ok) return "Falta Entrada";
+  if (d.cimed.ok && d.entrada.ok && !d.saida.ok) return "Falta Saída";
   return "OK";
 }
 
@@ -44,7 +61,8 @@ function calcularStatus(d) {
    RENDER
 ========================= */
 function renderAcompanhamento() {
-  const filtro = filtroStatus ? filtroStatus.value : "todos";
+  const statusFiltro = filtroStatus ? filtroStatus.value : "todos";
+  const dataFiltro = filtroData ? filtroData.value : "";
 
   let html = `
     <table>
@@ -52,6 +70,7 @@ function renderAcompanhamento() {
         <th>Cimed</th>
         <th>Entrada</th>
         <th>Saída</th>
+        <th>Data (${ETAPA})</th>
         <th>Status</th>
       </tr>
   `;
@@ -59,19 +78,27 @@ function renderAcompanhamento() {
   const codigos = Object.keys(dados);
 
   if (codigos.length === 0) {
-    html += `<tr><td colspan="4">Nenhum registro</td></tr>`;
+    html += `<tr><td colspan="5">Nenhum registro</td></tr>`;
   }
 
   codigos.sort().forEach(codigo => {
     const d = dados[codigo];
     const status = calcularStatus(d);
-    if (filtro !== "todos" && status !== filtro) return;
+
+    if (statusFiltro !== "todos" && status !== statusFiltro) return;
+
+    if (dataFiltro) {
+      if (!d[ETAPA].data) return;
+      const dataISO = d[ETAPA].data.split(",")[0].split("/").reverse().join("-");
+      if (dataISO !== dataFiltro) return;
+    }
 
     html += `
       <tr>
-        <td>${d.cimed ? codigo : ""}</td>
-        <td>${d.entrada ? codigo : ""}</td>
-        <td>${d.saida ? codigo : ""}</td>
+        <td>${d.cimed.ok ? codigo : ""}</td>
+        <td>${d.entrada.ok ? codigo : ""}</td>
+        <td>${d.saida.ok ? codigo : ""}</td>
+        <td>${d[ETAPA].data || ""}</td>
         <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
       </tr>
     `;
@@ -82,7 +109,7 @@ function renderAcompanhamento() {
 }
 
 /* =========================
-   CARREGAR DADOS DO BACKEND
+   CARREGAR BACKEND
 ========================= */
 async function carregarDados() {
   try {
@@ -93,6 +120,7 @@ async function carregarDados() {
     contadores = json.contadores || contadores;
 
     contador.innerText = contadores[ETAPA] || 0;
+    atualizarContadores();
     renderAcompanhamento();
   } catch (e) {
     console.error("Erro ao carregar dados", e);
@@ -100,7 +128,7 @@ async function carregarDados() {
 }
 
 /* =========================
-   BIPAGEM (RÁPIDA)
+   BIPAGEM (INSTANTÂNEA)
 ========================= */
 input.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
@@ -108,36 +136,40 @@ input.addEventListener("keydown", e => {
   const codigo = input.value.trim();
   if (!codigo) return;
 
-  // ===== ATUALIZA LOCAL IMEDIATA =====
   if (!dados[codigo]) {
-    dados[codigo] = { cimed: false, entrada: false, saida: false };
+    dados[codigo] = {
+      cimed: { ok: false, data: null },
+      entrada: { ok: false, data: null },
+      saida: { ok: false, data: null }
+    };
   }
 
-  if (dados[codigo][ETAPA]) {
+  if (dados[codigo][ETAPA].ok) {
     alert("Código já bipado nesta etapa");
     input.value = "";
     return;
   }
 
-  dados[codigo][ETAPA] = true;
+  dados[codigo][ETAPA] = {
+    ok: true,
+    data: agora()
+  };
+
   contadores[ETAPA]++;
   contador.innerText = contadores[ETAPA];
+  atualizarContadores();
   renderAcompanhamento();
   input.value = "";
 
-  // ===== ENVIO BACKEND (SEM BLOQUEAR UI) =====
-  const url = `${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`;
-  fetch(url).catch(() => {
-    console.warn("Falha ao registrar no backend");
-  });
+  // backend assíncrono
+  fetch(`${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`).catch(() => {});
 });
 
 /* =========================
-   FILTRO
+   FILTROS
 ========================= */
-if (filtroStatus) {
-  filtroStatus.addEventListener("change", renderAcompanhamento);
-}
+if (filtroStatus) filtroStatus.addEventListener("change", renderAcompanhamento);
+if (filtroData) filtroData.addEventListener("change", renderAcompanhamento);
 
 /* =========================
    INIT
