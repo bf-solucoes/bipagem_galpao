@@ -14,9 +14,10 @@ const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
 const filtroData = document.getElementById("filtroData");
 
-const cntCimed = document.getElementById("cntCimed");
-const cntEntrada = document.getElementById("cntEntrada");
-const cntSaida = document.getElementById("cntSaida");
+const cntCimed = document.getElementById("countCimed");
+const cntEntrada = document.getElementById("countEntrada");
+const cntSaida = document.getElementById("countSaida");
+
 
 if (!input || !contador || !acompanhamento) {
   alert("Erro: elementos não encontrados");
