@@ -2,54 +2,87 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+
+  <!-- ESSENCIAL PARA MOBILE / COLETOR -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Galpão Cimed</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- CABEÇALHO -->
-  <div class="header">
+  <header class="header">
     <h2>Galpão Cimed</h2>
+
+    <!-- CONTADORES À DIREITA -->
+    <div class="contadores">
+      <div>
+        Cimed<br>
+        <strong id="countCimed">0</strong>
+      </div>
+      <div>
+        Entrada<br>
+        <strong id="countEntrada">0</strong>
+      </div>
+      <div>
+        Saída<br>
+        <strong id="countSaida">0</strong>
+      </div>
+    </div>
+
     <img src="logo.png" alt="Logo da Empresa" class="logo">
-  </div>
+  </header>
 
   <!-- BIPAGEM -->
-  <input
-    id="input"
-    type="text"
-    placeholder="Bipe o código aqui"
-    autofocus
-  >
+  <section class="bipagem">
+    <input
+      id="input"
+      type="text"
+      placeholder="Bipe o código aqui"
+      autocomplete="off"
+      autofocus
+    >
+  </section>
 
-  <p>Total: <span id="contador">0</span></p>
 
-  <!-- FILTRO DE STATUS -->
-  <label for="filtroStatus"><strong>Status:</strong></label>
-  <select id="filtroStatus">
-    <option value="todos">Todos</option>
-    <option value="OK">OK</option>
-    <option value="Falta Entrada">Falta Entrada</option>
-    <option value="Falta Saída">Falta Saída</option>
-  </select>
 
-  <br><br>
+  <!-- FILTROS -->
+  <section class="filtros">
+    <label>
+      <strong>Status:</strong>
+      <select id="filtroStatus">
+        <option value="todos">Todos</option>
+        <option value="OK">OK</option>
+        <option value="Falta Entrada">Falta Entrada</option>
+        <option value="Falta Saída">Falta Saída</option>
+      </select>
+    </label>
+
+    <label>
+      <strong>Data:</strong>
+      <input type="date" id="filtroData">
+    </label>
+  </section>
 
   <!-- CABEÇALHO DO ACOMPANHAMENTO -->
   <div class="acomp-header">
-  <h3>Acompanhamento por Código</h3>
-  <button id="btnDownload">📥 Baixar Dados</button>
+    <h3>Acompanhamento por Código</h3>
+    <button id="btnDownload" type="button">📥 Baixar Dados</button>
   </div>
 
-  <!-- TABELA DE ACOMPANHAMENTO -->
+  <!-- TABELA -->
   <div id="acompanhamento"></div>
 
-  <!-- DEFINE ETAPA -->
+  <!-- DEFINIÇÃO DA ETAPA -->
   <script>
     const ETAPA = "cimed";
   </script>
 
   <!-- SCRIPT PRINCIPAL -->
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 
 </body>
 </html>
