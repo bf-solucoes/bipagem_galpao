@@ -9,7 +9,6 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyxfjB7AMLtyYeCtqyXRt-D
    ELEMENTOS
 ========================= */
 const input = document.getElementById("input");
-const contador = document.getElementById("contador");
 const acompanhamento = document.getElementById("acompanhamento");
 const filtroStatus = document.getElementById("filtroStatus");
 const filtroData = document.getElementById("filtroData");
@@ -18,9 +17,8 @@ const cntCimed = document.getElementById("countCimed");
 const cntEntrada = document.getElementById("countEntrada");
 const cntSaida = document.getElementById("countSaida");
 
-
-if (!input || !contador || !acompanhamento) {
-  alert("Erro: elementos não encontrados");
+if (!input || !acompanhamento || !cntCimed || !cntEntrada || !cntSaida) {
+  alert("Erro: elementos da tela não encontrados");
   return;
 }
 
@@ -121,7 +119,6 @@ async function carregarDados() {
     dados = json.dados || {};
     contadores = json.contadores || contadores;
 
-    contador.innerText = contadores[ETAPA] || 0;
     atualizarContadores();
     renderAcompanhamento();
     carregado = true;
@@ -131,7 +128,7 @@ async function carregarDados() {
 }
 
 /* =========================
-   BIPAGEM INSTANTÂNEA (SEM ENTER)
+   BIPAGEM AUTOMÁTICA (LEITOR)
 ========================= */
 let timer;
 
@@ -162,17 +159,15 @@ input.addEventListener("input", () => {
 
     contadores[ETAPA] = (contadores[ETAPA] || 0) + 1;
 
-    contador.innerText = contadores[ETAPA];
     atualizarContadores();
     renderAcompanhamento();
 
     input.value = "";
     input.focus();
 
-    // backend assíncrono (não trava)
     fetch(`${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`)
       .catch(() => {});
-  }, 120); // tempo ideal p/ leitor
+  }, 120);
 });
 
 /* =========================
