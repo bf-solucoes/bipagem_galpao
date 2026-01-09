@@ -166,3 +166,27 @@ th, td {
     align-items: flex-start;
   }
 }
+
+/* ===== MENSAGEM DUPLICIDADE ===== */
+.mensagem {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  display: none;
+}
+
+.mensagem.aviso {
+  background-color: #ffcc00;
+  color: #000;
+}
+
+.mensagem.sucesso {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.mensagem.erro {
+  background-color: #f44336;
+  color: #fff;
+}
