@@ -1,184 +1,241 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-/* =========================
-   CONFIG
-========================= */
-const API_URL = "https://script.google.com/macros/s/AKfycbyxfjB7AMLtyYeCtqyXRt-DbBYd4VS2-Vg0qDmIndsb4Xs_U-RJDTZldjwgi71-fPQuYQ/exec";
+  /* =========================
+     CONFIG
+  ========================= */
+  const API_URL =
+    "https://script.google.com/macros/s/AKfycbwI8QCCzYIUU_7_q5AcYV5zOUTTZ2ExcDuPzu1BfEOm4uHnUYL7X9Qz8njaovvWOPNi/exec";
 
-/* =========================
-   ELEMENTOS
-========================= */
-const input = document.getElementById("input");
-const acompanhamento = document.getElementById("acompanhamento");
-const filtroStatus = document.getElementById("filtroStatus");
-const filtroData = document.getElementById("filtroData");
+  const AUTO_REFRESH = 5000;
 
-const cntCimed = document.getElementById("countCimed");
-const cntEntrada = document.getElementById("countEntrada");
-const cntSaida = document.getElementById("countSaida");
+  const FILA = [];
+  let processando = false;
 
-if (!input || !acompanhamento || !cntCimed || !cntEntrada || !cntSaida) {
-  alert("Erro: elementos da tela não encontrados");
-  return;
-}
+  let dadosBrutos = {};
 
-if (typeof ETAPA === "undefined") {
-  alert("Erro: ETAPA não definida");
-  return;
-}
+  /* =========================
+     ELEMENTOS
+  ========================= */
+  const input = document.getElementById("input");
+  const acompanhamento = document.getElementById("acompanhamento");
 
-/* =========================
-   ESTADO
-========================= */
-let dados = {};
-let contadores = { cimed: 0, entrada: 0, saida: 0 };
-let carregado = false;
+  const cntCimed = document.getElementById("countCimed");
+  const cntEntrada = document.getElementById("countEntrada");
+  const cntSaida = document.getElementById("countSaida");
 
-/* =========================
-   UTILS
-========================= */
-function agora() {
-  return new Date().toLocaleString("pt-BR");
-}
+  const filtroStatus = document.getElementById("filtroStatus");
+  const filtroData = document.getElementById("filtroData");
+  const btnDownload = document.getElementById("btnDownload");
+  const msg = document.getElementById("mensagem");
 
-function atualizarContadores() {
-  cntCimed.innerText = contadores.cimed || 0;
-  cntEntrada.innerText = contadores.entrada || 0;
-  cntSaida.innerText = contadores.saida || 0;
-}
-
-/* =========================
-   STATUS
-========================= */
-function calcularStatus(d) {
-  if (!d.cimed.ok) return "Pendente Cimed";
-  if (d.cimed.ok && !d.entrada.ok) return "Falta Entrada";
-  if (d.cimed.ok && d.entrada.ok && !d.saida.ok) return "Falta Saída";
-  return "OK";
-}
-
-/* =========================
-   RENDER
-========================= */
-function renderAcompanhamento() {
-  const statusFiltro = filtroStatus ? filtroStatus.value : "todos";
-  const dataFiltro = filtroData ? filtroData.value : "";
-
-  let html = `
-    <table>
-      <tr>
-        <th>Cimed</th>
-        <th>Entrada</th>
-        <th>Saída</th>
-        <th>Data (${ETAPA})</th>
-        <th>Status</th>
-      </tr>
-  `;
-
-  const codigos = Object.keys(dados);
-
-  if (codigos.length === 0) {
-    html += `<tr><td colspan="5">Nenhum registro</td></tr>`;
+  /* =========================
+     MENSAGEM
+  ========================= */
+  function mostrarMensagem(texto, tipo = "aviso", tempo = 1200) {
+    if (!msg) return;
+    msg.className = `mensagem ${tipo}`;
+    msg.innerText = texto;
+    msg.style.display = "block";
+    setTimeout(() => msg.style.display = "none", tempo);
   }
 
-  codigos.sort().forEach(codigo => {
-    const d = dados[codigo];
-    const status = calcularStatus(d);
+  /* =========================
+     CONTADORES
+  ========================= */
+  function atualizarContadores(contadores) {
+    cntCimed.innerText = contadores.cimed || 0;
+    cntEntrada.innerText = contadores.entrada || 0;
+    cntSaida.innerText = contadores.saida || 0;
+  }
 
-    if (statusFiltro !== "todos" && status !== statusFiltro) return;
+  /* =========================
+     STATUS
+  ========================= */
+  function calcularStatus(d) {
+    if (!d.cimed.ok) return "Pendente Cimed";
+    if (d.cimed.ok && !d.entrada.ok) return "Falta Entrada";
+    if (d.cimed.ok && d.entrada.ok && !d.saida.ok) return "Falta Saída";
+    return "OK";
+  }
 
-    if (dataFiltro) {
-      if (!d[ETAPA].data) return;
-      const dataISO = d[ETAPA].data.split(",")[0].split("/").reverse().join("-");
-      if (dataISO !== dataFiltro) return;
-    }
+  /* =========================
+     FILTROS
+  ========================= */
+  function aplicarFiltros(dados) {
+    const statusSelecionado = filtroStatus?.value || "todos";
+    const dataSelecionada = filtroData?.value || "";
 
-    html += `
-      <tr>
-        <td>${d.cimed.ok ? codigo : ""}</td>
-        <td>${d.entrada.ok ? codigo : ""}</td>
-        <td>${d.saida.ok ? codigo : ""}</td>
-        <td>${d[ETAPA].data || ""}</td>
-        <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
-      </tr>
+    let filtrado = {};
+
+    Object.keys(dados).forEach(codigo => {
+      const d = dados[codigo];
+      const status = calcularStatus(d);
+
+      // filtro status
+      if (statusSelecionado !== "todos" && status !== statusSelecionado) return;
+
+      // filtro data (por etapa da página)
+      if (dataSelecionada) {
+        const dataEtapa = d[ETAPA].data;
+        if (!dataEtapa) return;
+
+        const dataISO = dataEtapa
+          .split(" ")[0]
+          .split("/")
+          .reverse()
+          .join("-");
+
+        if (dataISO !== dataSelecionada) return;
+      }
+
+      filtrado[codigo] = d;
+    });
+
+    return filtrado;
+  }
+
+  /* =========================
+     RENDER
+  ========================= */
+  function render(dados) {
+    let html = `
+      <table>
+        <tr>
+          <th>Cimed</th>
+          <th>Entrada</th>
+          <th>Saída</th>
+          <th>Data (Cimed)</th>
+          <th>Data (Entrada)</th>
+          <th>Data (Saída)</th>
+          <th>Status</th>
+        </tr>
     `;
+
+    Object.keys(dados).sort().forEach(codigo => {
+      const d = dados[codigo];
+      const status = calcularStatus(d);
+
+      html += `
+        <tr>
+          <td>${d.cimed.ok ? codigo : ""}</td>
+          <td>${d.entrada.ok ? codigo : ""}</td>
+          <td>${d.saida.ok ? codigo : ""}</td>
+          <td>${d.cimed.data || ""}</td>
+          <td>${d.entrada.data || ""}</td>
+          <td>${d.saida.data || ""}</td>
+          <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+    acompanhamento.innerHTML = html;
+  }
+
+  /* =========================
+     SINCRONIZAR
+  ========================= */
+  async function sincronizar() {
+    try {
+      const res = await fetch(`${API_URL}?acao=listar&_=${Date.now()}`);
+      const json = await res.json();
+
+      dadosBrutos = json.dados || {};
+      atualizarContadores(json.contadores || {});
+      render(aplicarFiltros(dadosBrutos));
+    } catch (e) {}
+  }
+
+  /* =========================
+     EVENTOS FILTROS
+  ========================= */
+  filtroStatus?.addEventListener("change", () => {
+    render(aplicarFiltros(dadosBrutos));
   });
 
-  html += "</table>";
-  acompanhamento.innerHTML = html;
-}
+  filtroData?.addEventListener("change", () => {
+    render(aplicarFiltros(dadosBrutos));
+  });
 
-/* =========================
-   BACKEND
-========================= */
-async function carregarDados() {
-  try {
-    const res = await fetch(`${API_URL}?acao=listar`);
-    const json = await res.json();
+  /* =========================
+     DOWNLOAD CSV
+  ========================= */
+  btnDownload?.addEventListener("click", () => {
+    let csv = "Codigo;Etapa;Data\n";
 
-    dados = json.dados || {};
-    contadores = json.contadores || contadores;
+    Object.keys(dadosBrutos).forEach(codigo => {
+      ["cimed", "entrada", "saida"].forEach(et => {
+        if (dadosBrutos[codigo][et].ok) {
+          csv += `${codigo};${et};${dadosBrutos[codigo][et].data}\n`;
+        }
+      });
+    });
 
-    atualizarContadores();
-    renderAcompanhamento();
-    carregado = true;
-  } catch (e) {
-    console.error("Erro ao carregar dados", e);
-  }
-}
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
 
-/* =========================
-   BIPAGEM AUTOMÁTICA (LEITOR)
-========================= */
-let timer;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bipagem_${ETAPA}.csv`;
+    a.click();
+  });
 
-input.addEventListener("input", () => {
-  clearTimeout(timer);
+  /* =========================
+     INPUT → FILA (ENTER)
+  ========================= */
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
 
-  timer = setTimeout(() => {
     const codigo = input.value.trim();
-    if (!codigo || !carregado) return;
-
-    if (!dados[codigo]) {
-      dados[codigo] = {
-        cimed: { ok: false, data: null },
-        entrada: { ok: false, data: null },
-        saida: { ok: false, data: null }
-      };
-    }
-
-    if (dados[codigo][ETAPA].ok) {
-      input.value = "";
-      return;
-    }
-
-    dados[codigo][ETAPA] = {
-      ok: true,
-      data: agora()
-    };
-
-    contadores[ETAPA] = (contadores[ETAPA] || 0) + 1;
-
-    atualizarContadores();
-    renderAcompanhamento();
-
     input.value = "";
     input.focus();
 
-    fetch(`${API_URL}?acao=registrar&codigo=${encodeURIComponent(codigo)}&etapa=${ETAPA}`)
-      .catch(() => {});
-  }, 120);
-});
+    if (!codigo) return;
 
-/* =========================
-   FILTROS
-========================= */
-if (filtroStatus) filtroStatus.addEventListener("change", renderAcompanhamento);
-if (filtroData) filtroData.addEventListener("change", renderAcompanhamento);
+    if (dadosBrutos[codigo] && dadosBrutos[codigo][ETAPA]?.ok) {
+      mostrarMensagem(`⚠️ ${codigo} já registrado`, "aviso");
+      return;
+    }
 
-/* =========================
-   INIT
-========================= */
-carregarDados();
+    FILA.push(codigo);
+    processarFila();
+  });
+
+  /* =========================
+     PROCESSAR FILA
+  ========================= */
+  async function processarFila() {
+    if (processando || FILA.length === 0) return;
+
+    processando = true;
+    const codigo = FILA.shift();
+
+    try {
+      await fetch(
+        `${API_URL}?acao=registrar&etapa=${ETAPA}&codigo=${encodeURIComponent(codigo)}`
+      );
+      mostrarMensagem(`✅ ${codigo}`, "sucesso");
+      await sincronizar();
+    } catch {
+      mostrarMensagem(`❌ Erro ${codigo}`, "erro");
+    } finally {
+      processando = false;
+      processarFila();
+    }
+  }
+
+  /* =========================
+     AUTO REFRESH
+  ========================= */
+  setInterval(() => {
+    sincronizar();
+  }, AUTO_REFRESH);
+
+  /* =========================
+     INIT
+  ========================= */
+  sincronizar();
+  input.focus();
 
 });
