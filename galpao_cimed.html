@@ -1,89 +1,88 @@
-  <!DOCTYPE html>
-  <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- ESSENCIAL PARA MOBILE / COLETOR -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galpão Cimed</title>
 
-    <title>Galpão Cimed</title>
+  <link rel="stylesheet" href="style.css">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
+  <!-- SUPABASE SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
-    <!-- CABEÇALHO -->
-    <header class="header">
-      <h2>Galpão Cimed</h2>
+  <!-- CABEÇALHO -->
+  <header class="header">
+    <h2>Galpão Cimed</h2>
 
-      <!-- CONTADORES À DIREITA -->
-      <div class="contadores">
-        <div>
-          Cimed<br>
-          <strong id="countCimed">0</strong>
-        </div>
-        <div>
-          Entrada<br>
-          <strong id="countEntrada">0</strong>
-        </div>
-        <div>
-          Saída<br>
-          <strong id="countSaida">0</strong>
-        </div>
+    <div class="contadores">
+      <div>
+        Cimed<br>
+        <strong id="countCimed">0</strong>
       </div>
-
-      <img src="logo.png" alt="Logo da Empresa" class="logo">
-    </header>
-
-    <!-- BIPAGEM -->
-    <section class="bipagem">
-      <input
-        id="input"
-        type="text"
-        placeholder="Bipe o código aqui"
-        autocomplete="off"
-        autofocus
-      >
-    </section>
-
-
-
-    <!-- FILTROS -->
-    <section class="filtros">
-      <label>
-        <strong>Status:</strong>
-        <select id="filtroStatus">
-          <option value="todos">Todos</option>
-          <option value="Pendente Cimed">Pendente Cimed</option>
-          <option value="Falta Entrada">Falta Entrada</option>
-          <option value="Falta Saída">Falta Saída</option>
-          <option value="OK">OK</option>
-        </select>
-      </label>
-
-      <label>
-        <strong>Data:</strong>
-        <input type="date" id="filtroData">
-      </label>
-    </section>
-
-    <!-- CABEÇALHO DO ACOMPANHAMENTO -->
-    <div class="acomp-header">
-      <h3>Acompanhamento por Código</h3>
-      <button id="btnDownload" type="button">📥 Baixar Dados</button>
+      <div>
+        Entrada<br>
+        <strong id="countEntrada">0</strong>
+      </div>
+      <div>
+        Saída<br>
+        <strong id="countSaida">0</strong>
+      </div>
     </div>
 
-    <!-- TABELA -->
+    <img src="logo.png" alt="Logo da Empresa" class="logo">
+  </header>
+
+  <!-- BIPAGEM -->
+  <section class="bipagem">
+    <input
+      id="input"
+      type="text"
+      placeholder="Bipe o código aqui"
+      autocomplete="off"
+      autofocus
+    >
+  </section>
+
+  <!-- FILTROS -->
+  <section class="filtros">
+    <label>
+      <strong>Status:</strong>
+      <select id="filtroStatus">
+        <option value="todos">Todos</option>
+        <option value="Pendente Cimed">Pendente Cimed</option>
+        <option value="Falta Entrada">Falta Entrada</option>
+        <option value="Falta Saída">Falta Saída</option>
+        <option value="OK">OK</option>
+      </select>
+    </label>
+
+    <label>
+      <strong>Data:</strong>
+      <input type="date" id="filtroData">
+    </label>
+  </section>
+
+  <!-- CABEÇALHO DA TABELA -->
+  <div class="acomp-header">
+    <h3>Acompanhamento por Código</h3>
+    <button id="btnDownload" type="button">📥 Baixar Dados</button>
+  </div>
+
+  <!-- TABELA COM SCROLL -->
+  <div class="tabela-container">
     <div id="acompanhamento"></div>
+  </div>
 
-    <!-- DEFINIÇÃO DA ETAPA -->
-    <script>
-      const ETAPA = "cimed";
-    </script>
+  <!-- ETAPA -->
+  <script>
+    const ETAPA = "cimed";
+  </script>
 
-    <!-- SCRIPT PRINCIPAL -->
-    <script src="script.js" defer></script>
+  <!-- SCRIPT -->
+  <script src="script.js" defer></script>
 
-  </body>
-  </html>
+</body>
+</html>
