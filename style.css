@@ -4,6 +4,8 @@ body {
   padding: 20px;
   background-color: #07163f; /* fundo azul escuro */
   color: #ffffff;
+  height: 100vh;
+  overflow: hidden; /* impede scroll do body */
 }
 
 /* ===== CABEÇALHO / LOGO ===== */
@@ -11,7 +13,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #07163f;
+  padding-bottom: 10px;
 }
 
 .header h2 {
@@ -48,16 +56,44 @@ input[type="date"] {
   padding: 4px 6px;
   border-radius: 5px;
   border: none;
-  width: 150px; /* tamanho reduzido */
+  width: 150px;
 }
 
-/* ===== CABEÇALHO ACOMPANHAMENTO ===== */
+/* ===== FILTROS / BIPAGEM FIXOS ===== */
+.bipagem,
+.filtros,
 .acomp-header {
+  position: sticky;
+  background-color: #07163f;
+  z-index: 90;
+}
+
+.bipagem {
+  top: 110px;
+}
+
+.filtros {
+  top: 160px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.filtros label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.acomp-header {
+  top: 220px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 25px;
-  margin-bottom: 10px;
+  margin-top: 15px;
+  padding-bottom: 10px;
 }
 
 .acomp-header h3 {
@@ -79,17 +115,27 @@ input[type="date"] {
   background-color: #1565c0;
 }
 
+/* ===== CONTAINER DA TABELA (SCROLL) ===== */
+.tabela-container {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  background-color: #ffffff;
+  border-radius: 6px;
+}
+
 /* ===== TABELA ===== */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
   background-color: #ffffff;
   color: #000000;
 }
 
 th {
   background-color: #f2f2f2;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 th, td {
@@ -109,7 +155,7 @@ th, td {
   font-weight: bold;
 }
 
-/* ===== CONTADORES À DIREITA ===== */
+/* ===== CONTADORES ===== */
 .contadores {
   display: flex;
   gap: 15px;
@@ -127,21 +173,6 @@ th, td {
 
 .contadores strong {
   font-size: 18px;
-}
-
-/* ===== FILTROS ===== */
-.filtros {
-  display: flex;
-  justify-content: space-between; /* status esquerda / data direita */
-  align-items: center;
-  margin-top: 15px;
-  gap: 20px;
-}
-
-.filtros label {
-  display: flex;
-  flex-direction: column;
-  font-size: 14px;
 }
 
 /* ===== RESPONSIVO (COLETOR / CELULAR) ===== */
@@ -165,9 +196,13 @@ th, td {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .tabela-container {
+    max-height: calc(100vh - 360px);
+  }
 }
 
-/* ===== MENSAGEM DUPLICIDADE ===== */
+/* ===== MENSAGEM ===== */
 .mensagem {
   margin-top: 10px;
   padding: 10px;
