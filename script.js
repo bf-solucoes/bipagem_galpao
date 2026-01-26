@@ -1,16 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   /* =========================
-     CONFIG
+     SUPABASE CONFIG
   ========================= */
-  const API_URL =
-    "https://script.google.com/macros/s/AKfycbwI8QCCzYIUU_7_q5AcYV5zOUTTZ2ExcDuPzu1BfEOm4uHnUYL7X9Qz8njaovvWOPNi/exec";
+  const SUPABASE_URL = "https://rmylubijetneztskpaud.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_k3Tkbfch2OQ78VfeU8NNdA_30vP0WEX";
+
+  const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
   const AUTO_REFRESH = 5000;
-
   const FILA = [];
   let processando = false;
-
   let dadosBrutos = {};
 
   /* =========================
@@ -26,109 +29,106 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroStatus = document.getElementById("filtroStatus");
   const filtroData = document.getElementById("filtroData");
   const btnDownload = document.getElementById("btnDownload");
-  const msg = document.getElementById("mensagem");
 
   /* =========================
-     MENSAGEM
+     STATUS (FONTE ÚNICA)
   ========================= */
-  function mostrarMensagem(texto, tipo = "aviso", tempo = 1200) {
-    if (!msg) return;
-    msg.className = `mensagem ${tipo}`;
-    msg.innerText = texto;
-    msg.style.display = "block";
-    setTimeout(() => msg.style.display = "none", tempo);
-  }
-
-  /* =========================
-     CONTADORES
-  ========================= */
-  function atualizarContadores(contadores) {
-    cntCimed.innerText = contadores.cimed || 0;
-    cntEntrada.innerText = contadores.entrada || 0;
-    cntSaida.innerText = contadores.saida || 0;
-  }
-
-  /* =========================
-     STATUS
-  ========================= */
-  function calcularStatus(d) {
-    if (!d.cimed.ok) return "Pendente Cimed";
-    if (d.cimed.ok && !d.entrada.ok) return "Falta Entrada";
-    if (d.cimed.ok && d.entrada.ok && !d.saida.ok) return "Falta Saída";
+  function calcularStatus(r) {
+    if (!r.cimed) return "Pendente Cimed";
+    if (r.cimed && !r.entrada) return "Falta Entrada";
+    if (r.cimed && r.entrada && !r.saida) return "Falta Saída";
     return "OK";
   }
 
   /* =========================
-     FILTROS
+     FILTROS + CONTADORES
   ========================= */
   function aplicarFiltros(dados) {
-    const statusSelecionado = filtroStatus?.value || "todos";
-    const dataSelecionada = filtroData?.value || "";
+    const statusSel = filtroStatus?.value || "todos";
+    const dataSel = filtroData?.value || "";
 
     let filtrado = {};
+    let cimed = 0;
+    let entrada = 0;
+    let saida = 0;
 
     Object.keys(dados).forEach(codigo => {
-      const d = dados[codigo];
-      const status = calcularStatus(d);
+      const r = dados[codigo];
+      const status = calcularStatus(r);
 
       // filtro status
-      if (statusSelecionado !== "todos" && status !== statusSelecionado) return;
+      if (statusSel !== "todos" && status !== statusSel) return;
 
-      // filtro data (por etapa da página)
-      if (dataSelecionada) {
-        const dataEtapa = d[ETAPA].data;
-        if (!dataEtapa) return;
+      // filtro data por etapa
+      if (dataSel) {
+        const dataRef =
+          ETAPA === "cimed" ? r.data_cimed :
+          ETAPA === "entrada" ? r.data_entrada :
+          r.data_saida;
 
-        const dataISO = dataEtapa
-          .split(" ")[0]
-          .split("/")
-          .reverse()
-          .join("-");
+        if (!dataRef) return;
 
-        if (dataISO !== dataSelecionada) return;
+        const iso = new Date(dataRef).toISOString().slice(0, 10);
+        if (iso !== dataSel) return;
       }
 
-      filtrado[codigo] = d;
+      filtrado[codigo] = r;
+
+      if (r.cimed) cimed++;
+      if (r.entrada) entrada++;
+      if (r.saida) saida++;
     });
+
+    // contadores reativos aos filtros
+    if (cntCimed) cntCimed.innerText = cimed;
+    if (cntEntrada) cntEntrada.innerText = entrada;
+    if (cntSaida) cntSaida.innerText = saida;
 
     return filtrado;
   }
 
   /* =========================
-     RENDER
+     RENDER (CORRIGIDO)
   ========================= */
   function render(dados) {
     let html = `
       <table>
-        <tr>
-          <th>Cimed</th>
-          <th>Entrada</th>
-          <th>Saída</th>
-          <th>Data (Cimed)</th>
-          <th>Data (Entrada)</th>
-          <th>Data (Saída)</th>
-          <th>Status</th>
-        </tr>
+        <thead>
+          <tr>
+            <th>Cimed</th>
+            <th>Entrada</th>
+            <th>Saída</th>
+            <th>Data (Cimed)</th>
+            <th>Data (Entrada)</th>
+            <th>Data (Saída)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
     `;
 
     Object.keys(dados).sort().forEach(codigo => {
-      const d = dados[codigo];
-      const status = calcularStatus(d);
+      const r = dados[codigo];
+      const status = calcularStatus(r);
 
       html += `
         <tr>
-          <td>${d.cimed.ok ? codigo : ""}</td>
-          <td>${d.entrada.ok ? codigo : ""}</td>
-          <td>${d.saida.ok ? codigo : ""}</td>
-          <td>${d.cimed.data || ""}</td>
-          <td>${d.entrada.data || ""}</td>
-          <td>${d.saida.data || ""}</td>
+          <td>${r.cimed ? codigo : ""}</td>
+          <td>${r.entrada ? codigo : ""}</td>
+          <td>${r.saida ? codigo : ""}</td>
+          <td>${r.data_cimed ? new Date(r.data_cimed).toLocaleString("pt-BR") : ""}</td>
+          <td>${r.data_entrada ? new Date(r.data_entrada).toLocaleString("pt-BR") : ""}</td>
+          <td>${r.data_saida ? new Date(r.data_saida).toLocaleString("pt-BR") : ""}</td>
           <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
         </tr>
       `;
     });
 
-    html += "</table>";
+    html += `
+        </tbody>
+      </table>
+    `;
+
     acompanhamento.innerHTML = html;
   }
 
@@ -137,13 +137,71 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================= */
   async function sincronizar() {
     try {
-      const res = await fetch(`${API_URL}?acao=listar&_=${Date.now()}`);
-      const json = await res.json();
+      const { data, error } = await supabase
+        .from("controle_galpao_cd")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      dadosBrutos = json.dados || {};
-      atualizarContadores(json.contadores || {});
+      if (error) throw error;
+
+      dadosBrutos = {};
+      data.forEach(r => {
+        dadosBrutos[r.codigo] = r;
+      });
+
       render(aplicarFiltros(dadosBrutos));
-    } catch (e) {}
+    } catch (e) {
+      console.error("Erro Supabase:", e);
+    }
+  }
+
+  /* =========================
+     REGISTRAR (UPSERT)
+  ========================= */
+  async function registrar(codigo) {
+    const payload =
+      ETAPA === "cimed"
+        ? { codigo, cimed: true, data_cimed: new Date() }
+        : ETAPA === "entrada"
+        ? { codigo, entrada: true, data_entrada: new Date() }
+        : { codigo, saida: true, data_saida: new Date() };
+
+    const { error } = await supabase
+      .from("controle_galpao_cd")
+      .upsert(payload, { onConflict: "codigo" });
+
+    if (error) throw error;
+  }
+
+  /* =========================
+     INPUT → FILA
+  ========================= */
+  input.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const codigo = input.value.trim();
+    input.value = "";
+
+    if (!codigo) return;
+
+    FILA.push(codigo);
+    processarFila();
+  });
+
+  async function processarFila() {
+    if (processando || FILA.length === 0) return;
+    processando = true;
+
+    try {
+      await registrar(FILA.shift());
+      await sincronizar();
+    } catch (e) {
+      console.error("Erro ao registrar:", e);
+    } finally {
+      processando = false;
+      processarFila();
+    }
   }
 
   /* =========================
@@ -161,81 +219,26 @@ document.addEventListener("DOMContentLoaded", () => {
      DOWNLOAD CSV
   ========================= */
   btnDownload?.addEventListener("click", () => {
-    let csv = "Codigo;Etapa;Data\n";
+    let csv = "Codigo;Cimed;Entrada;Saida;Data Cimed;Data Entrada;Data Saida;Status\n";
 
-    Object.keys(dadosBrutos).forEach(codigo => {
-      ["cimed", "entrada", "saida"].forEach(et => {
-        if (dadosBrutos[codigo][et].ok) {
-          csv += `${codigo};${et};${dadosBrutos[codigo][et].data}\n`;
-        }
-      });
+    Object.values(dadosBrutos).forEach(r => {
+      csv += `${r.codigo};${r.cimed};${r.entrada};${r.saida};` +
+             `${r.data_cimed || ""};${r.data_entrada || ""};${r.data_saida || ""};` +
+             `${calcularStatus(r)}\n`;
     });
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
-    a.download = `bipagem_${ETAPA}.csv`;
+    a.download = `controle_${ETAPA}.csv`;
     a.click();
   });
-
-  /* =========================
-     INPUT → FILA (ENTER)
-  ========================= */
-  input.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-
-    const codigo = input.value.trim();
-    input.value = "";
-    input.focus();
-
-    if (!codigo) return;
-
-    if (dadosBrutos[codigo] && dadosBrutos[codigo][ETAPA]?.ok) {
-      mostrarMensagem(`⚠️ ${codigo} já registrado`, "aviso");
-      return;
-    }
-
-    FILA.push(codigo);
-    processarFila();
-  });
-
-  /* =========================
-     PROCESSAR FILA
-  ========================= */
-  async function processarFila() {
-    if (processando || FILA.length === 0) return;
-
-    processando = true;
-    const codigo = FILA.shift();
-
-    try {
-      await fetch(
-        `${API_URL}?acao=registrar&etapa=${ETAPA}&codigo=${encodeURIComponent(codigo)}`
-      );
-      mostrarMensagem(`✅ ${codigo}`, "sucesso");
-      await sincronizar();
-    } catch {
-      mostrarMensagem(`❌ Erro ${codigo}`, "erro");
-    } finally {
-      processando = false;
-      processarFila();
-    }
-  }
-
-  /* =========================
-     AUTO REFRESH
-  ========================= */
-  setInterval(() => {
-    sincronizar();
-  }, AUTO_REFRESH);
 
   /* =========================
      INIT
   ========================= */
   sincronizar();
-  input.focus();
+  setInterval(sincronizar, AUTO_REFRESH);
 
 });
