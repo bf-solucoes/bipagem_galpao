@@ -116,9 +116,32 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${r.cimed ? codigo : ""}</td>
           <td>${r.entrada ? codigo : ""}</td>
           <td>${r.saida ? codigo : ""}</td>
-          <td>${r.data_cimed ? new Date(r.data_cimed).toLocaleString("pt-BR") : ""}</td>
-          <td>${r.data_entrada ? new Date(r.data_entrada).toLocaleString("pt-BR") : ""}</td>
-          <td>${r.data_saida ? new Date(r.data_saida).toLocaleString("pt-BR") : ""}</td>
+
+          <td>${
+            r.data_cimed
+              ? new Date(r.data_cimed + "Z").toLocaleString("pt-BR", {
+                  timeZone: "America/Sao_Paulo"
+                })
+              : ""
+          }</td>
+
+          <td>${
+            r.data_entrada
+              ? new Date(r.data_entrada + "Z").toLocaleString("pt-BR", {
+                  timeZone: "America/Sao_Paulo"
+                })
+              : ""
+          }</td>
+
+          <td>${
+            r.data_saida
+              ? new Date(r.data_saida + "Z").toLocaleString("pt-BR", {
+                  timeZone: "America/Sao_Paulo"
+                })
+              : ""
+          }</td>
+
+
           <td class="${status === "OK" ? "ok" : "erro"}">${status}</td>
         </tr>
       `;
