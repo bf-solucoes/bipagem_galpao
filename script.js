@@ -59,18 +59,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // filtro status
       if (statusSel !== "todos" && status !== statusSel) return;
 
-      // filtro data por etapa
+      // filtro de data SEMPRE baseado na CIMED
       if (dataSel) {
-        const dataRef =
-          ETAPA === "cimed" ? r.data_cimed :
-          ETAPA === "entrada" ? r.data_entrada :
-          r.data_saida;
+        if (!r.data_cimed) return;
 
-        if (!dataRef) return;
-
-        const iso = new Date(dataRef).toISOString().slice(0, 10);
+        const iso = new Date(r.data_cimed).toISOString().slice(0, 10);
         if (iso !== dataSel) return;
       }
+
 
       filtrado[codigo] = r;
 
